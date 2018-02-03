@@ -1,13 +1,13 @@
 #pragma once
 
-class DisplayProcessor
+// Creates and processes the shared surface to extract light values
+class LightProcessor
 {
 public:
-	DisplayProcessor();
-	~DisplayProcessor();
+	LightProcessor();
+	~LightProcessor();
 
-	bool InitOutput(int singleOutput, int lightTextureWidth, int lightTextureHeight);
-	void CleanRefs();
+	bool Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight);
 	HANDLE GetSharedSurfaceHandle();
 
 	int GetOutputCount() const;
@@ -20,7 +20,6 @@ private:
 	void SetViewPort(unsigned int width, unsigned int height);
 	bool InitShaders();
 	bool CreateSharedSurface(int singleOutput);
-	bool DrawFrame();
 
 private:
 	int						m_OutputCount;

@@ -4,12 +4,12 @@
 
 #include "DirectXResources.h"
 
+// For handling threads for each screen
 class ThreadManager
 {
 public:
 	ThreadManager();
 	~ThreadManager();
-	void Clean();
 	bool Initialise(int singleOutput, unsigned int outputCount, HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent, HANDLE terminateThreadsEvent, HANDLE sharedHandle, const RECT& desktopDimensions);
 	void WaitForThreadTermination();
 
@@ -34,15 +34,9 @@ public:
 		// X / Y offsets of the desktop
 		int offsetX;
 		int offsetY;
-
-		// DirectX resources
-		DirectXResources directXResources;
 	};
 
 private:
-	bool InitialiseDx(DirectXResources* resources);
-	void CleanDx(DirectXResources* resources);
-
 	unsigned int m_ThreadCount;
 	std::vector<HANDLE> m_ThreadHandles;
 	std::vector<ThreadData> m_ThreadData;

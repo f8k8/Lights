@@ -1,5 +1,6 @@
 #pragma once
 
+// For handling dynamic wait times with a back off
 class DynamicWait
 {
 public:

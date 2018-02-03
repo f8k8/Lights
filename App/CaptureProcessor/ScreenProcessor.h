@@ -6,15 +6,17 @@
 
 #include "Vertex.h"
 
-// For handling the compositing of duplicates onto the main surface
-class DisplayManager
+// For handling updates from a single screen
+// This processes updates from the DuplicationManager and composites them onto
+// the shared surface
+class ScreenProcessor
 {
 public:
-	DisplayManager();
-	~DisplayManager();
-	void InitD3D(DirectXResources& data);
+	ScreenProcessor();
+	~ScreenProcessor();
+	bool Initialise();
+	Microsoft::WRL::ComPtr<ID3D11Device> GetDevice() const;
 	bool ProcessFrame(const DuplicationManager& duplicationManager, Microsoft::WRL::ComPtr<ID3D11Texture2D> sharedSurface, int offsetX, int offsetY);
-	void CleanRefs();
 
 private:
 	bool ProcessMoves(Microsoft::WRL::ComPtr<ID3D11Texture2D> sharedSurface, DXGI_OUTDUPL_MOVE_RECT* moveRects, unsigned int moveCount, int offsetX, int offsetY, const DXGI_OUTPUT_DESC& desktopDescription, int texWidth, int texHeight);

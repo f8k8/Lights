@@ -9,7 +9,7 @@ public:
 	DuplicationManager();
 	~DuplicationManager();
 
-	bool Init(Microsoft::WRL::ComPtr<ID3D11Device> device, unsigned int output);
+	bool Initialise(Microsoft::WRL::ComPtr<ID3D11Device> device, unsigned int outputIndex);
 	bool GetFrame(bool* timeout);
 	bool ReleaseFrame();
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> GetTexture() const;
@@ -36,6 +36,8 @@ private:
 
 	// The last duplicated metadata
 	std::vector<BYTE>				m_Metadata;
+
+	// These are raw pointers into the m_Metadata array
 	RECT*							m_DirtyRects;
 	unsigned int					m_DirtyCount;
 	DXGI_OUTDUPL_MOVE_RECT*			m_MoveRects;

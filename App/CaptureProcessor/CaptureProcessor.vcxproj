@@ -167,8 +167,8 @@
   <ItemGroup>
     <ClInclude Include="CaptureProcessor.h" />
     <ClInclude Include="DirectXResources.h" />
-    <ClInclude Include="DisplayManager.h" />
-    <ClInclude Include="DisplayProcessor.h" />
+    <ClInclude Include="ScreenProcessor.h" />
+    <ClInclude Include="LightProcessor.h" />
     <ClInclude Include="DuplicationManager.h" />
     <ClInclude Include="DynamicWait.h" />
     <ClInclude Include="stdafx.h" />
@@ -177,8 +177,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CaptureProcessor.cpp" />
-    <ClCompile Include="DisplayManager.cpp" />
-    <ClCompile Include="DisplayProcessor.cpp" />
+    <ClCompile Include="ScreenProcessor.cpp" />
+    <ClCompile Include="LightProcessor.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="DuplicationManager.cpp" />
     <ClCompile Include="DynamicWait.cpp" />

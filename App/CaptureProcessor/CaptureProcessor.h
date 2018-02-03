@@ -1,9 +1,10 @@
 #pragma once
 
-#include "DisplayProcessor.h"
+#include "LightProcessor.h"
 #include "ThreadManager.h"
 #include "DynamicWait.h"
 
+// Main capture processor to start / stop capturing
 class CaptureProcessor
 {
 public:
@@ -25,6 +26,6 @@ private:
 	HANDLE m_TerminateThreadsEvent;
 
 	DynamicWait m_DynamicWait;
-	DisplayProcessor m_DisplayProcessor;
-	ThreadManager m_ThreadManager;
+	LightProcessor* m_LightProcessor;
+	ThreadManager* m_ThreadManager;
 };

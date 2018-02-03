@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "DisplayProcessor.h"
+#include "LightProcessor.h"
 
 #include "Vertex.h"
 
@@ -9,7 +9,7 @@
 
 using namespace Microsoft::WRL;
 
-DisplayProcessor::DisplayProcessor() : 
+LightProcessor::LightProcessor() : 
 	m_Device(nullptr),
 	m_Factory(nullptr),
 	m_DeviceContext(nullptr),
@@ -29,12 +29,12 @@ DisplayProcessor::DisplayProcessor() :
 
 }
 
-DisplayProcessor::~DisplayProcessor()
+LightProcessor::~LightProcessor()
 {
-	CleanRefs();
+	
 }
 
-bool DisplayProcessor::InitOutput(int singleOutput, int lightTextureWidth, int lightTextureHeight)
+bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight)
 {
 	HRESULT hr;
 
@@ -88,14 +88,14 @@ bool DisplayProcessor::InitOutput(int singleOutput, int lightTextureWidth, int l
 	}
 
 	ComPtr<IDXGIAdapter> dxgiAdapter = nullptr;
-	hr = dxgiDevice.As(&dxgiAdapter);
+	hr = dxgiDevice->GetAdapter(dxgiAdapter.GetAddressOf());
 	dxgiDevice = nullptr;
 	if (FAILED(hr))
 	{
 		return false;
 	}
 
-	hr = dxgiAdapter.As(&m_Factory);
+	hr = dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), &m_Factory);
 	dxgiAdapter = nullptr;
 	if (FAILED(hr))
 	{
@@ -162,78 +162,10 @@ bool DisplayProcessor::InitOutput(int singleOutput, int lightTextureWidth, int l
 	return true;
 }
 
-void DisplayProcessor::CleanRefs()
-{
-	if (m_VertexShader)
-	{
-		m_VertexShader = nullptr;
-	}
-
-	if (m_PixelShader)
-	{
-		m_PixelShader = nullptr;
-	}
-
-	if (m_InputLayout)
-	{
-		m_InputLayout = nullptr;
-	}
-
-	if (m_RTV)
-	{
-		m_RTV = nullptr;
-	}
-
-	if (m_SamplerLinear)
-	{
-		m_SamplerLinear = nullptr;
-	}
-
-	if (m_BlendState)
-	{
-		m_BlendState = nullptr;
-	}
-
-	if (m_DeviceContext)
-	{
-		m_DeviceContext = nullptr;
-	}
-
-	if (m_Device)
-	{
-		m_Device = nullptr;
-	}
-
-	if (m_SharedSurface)
-	{
-		m_SharedSurface = nullptr;
-	}
-
-	if (m_LightSurface)
-	{
-		m_LightSurface = nullptr;
-	}
-
-	if (m_StagingLightSurface)
-	{
-		m_StagingLightSurface = nullptr;
-	}
-
-	if (m_KeyMutex)
-	{
-		m_KeyMutex = nullptr;
-	}
-
-	if (m_Factory)
-	{
-		m_Factory = nullptr;
-	}
-}
-
 //
 // Returns shared handle
 //
-HANDLE DisplayProcessor::GetSharedSurfaceHandle()
+HANDLE LightProcessor::GetSharedSurfaceHandle()
 {
 	HANDLE handle = nullptr;
 
@@ -250,17 +182,17 @@ HANDLE DisplayProcessor::GetSharedSurfaceHandle()
 	return handle;
 }
 
-int DisplayProcessor::GetOutputCount() const
+int LightProcessor::GetOutputCount() const
 {
 	return m_OutputCount;
 }
 
-const RECT& DisplayProcessor::GetDesktopBounds() const
+const RECT& LightProcessor::GetDesktopBounds() const
 {
 	return m_DesktopBounds;
 }
 
-bool DisplayProcessor::ProcessFrame()
+bool LightProcessor::ProcessFrame()
 {
 	HRESULT hr = m_KeyMutex->AcquireSync(1, 100);
 	if (hr == static_cast<HRESULT>(WAIT_TIMEOUT))
@@ -310,7 +242,7 @@ bool DisplayProcessor::ProcessFrame()
 	}
 	unsigned int stride = sizeof(Vertex);
 	unsigned int offset = 0;
-	m_DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+	m_DeviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
 
 	// Create a shader resource view for the source
 	D3D11_TEXTURE2D_DESC textureDescription;
@@ -335,11 +267,11 @@ bool DisplayProcessor::ProcessFrame()
 	// Set up shader / blending states
 	FLOAT blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
 	m_DeviceContext->OMSetBlendState(nullptr, blendFactor, 0xFFFFFFFF);
-	m_DeviceContext->OMSetRenderTargets(1, &m_RTV, nullptr);
+	m_DeviceContext->OMSetRenderTargets(1, m_RTV.GetAddressOf(), nullptr);
 	m_DeviceContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
 	m_DeviceContext->PSSetShader(m_PixelShader.Get(), nullptr, 0);
-	m_DeviceContext->PSSetShaderResources(0, 1, &shaderResource);
-	m_DeviceContext->PSSetSamplers(0, 1, &m_SamplerLinear);
+	m_DeviceContext->PSSetShaderResources(0, 1, shaderResource.GetAddressOf());
+	m_DeviceContext->PSSetSamplers(0, 1, m_SamplerLinear.GetAddressOf());
 	m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	// Draw the vertices
@@ -370,7 +302,7 @@ bool DisplayProcessor::ProcessFrame()
 	return true;
 }
 
-bool DisplayProcessor::CreateRenderTarget(unsigned int width, unsigned int height)
+bool LightProcessor::CreateRenderTarget(unsigned int width, unsigned int height)
 {
 	// Create the texture to render into
 	D3D11_TEXTURE2D_DESC lightTextureDescription;
@@ -399,7 +331,7 @@ bool DisplayProcessor::CreateRenderTarget(unsigned int width, unsigned int heigh
 	}
 
 	// Set new render target
-	m_DeviceContext->OMSetRenderTargets(1, &m_RTV, nullptr);
+	m_DeviceContext->OMSetRenderTargets(1, m_RTV.GetAddressOf(), nullptr);
 
 	// Create the staging light surface so we can get CPU access
 	D3D11_TEXTURE2D_DESC stagingTextureDescription;
@@ -423,7 +355,7 @@ bool DisplayProcessor::CreateRenderTarget(unsigned int width, unsigned int heigh
 	return true;
 }
 
-void DisplayProcessor::SetViewPort(unsigned int width, unsigned int height)
+void LightProcessor::SetViewPort(unsigned int width, unsigned int height)
 {
 	D3D11_VIEWPORT viewport;
 	viewport.Width = static_cast<FLOAT>(width);
@@ -435,7 +367,7 @@ void DisplayProcessor::SetViewPort(unsigned int width, unsigned int height)
 	m_DeviceContext->RSSetViewports(1, &viewport);
 }
 
-bool DisplayProcessor::InitShaders()
+bool LightProcessor::InitShaders()
 {
 	HRESULT hr;
 
@@ -469,7 +401,7 @@ bool DisplayProcessor::InitShaders()
 	return true;
 }
 
-bool DisplayProcessor::CreateSharedSurface(int singleOutput)
+bool LightProcessor::CreateSharedSurface(int singleOutput)
 {
 	HRESULT hr;
 
@@ -482,7 +414,7 @@ bool DisplayProcessor::CreateSharedSurface(int singleOutput)
 	}
 
 	ComPtr<IDXGIAdapter> dxgiAdapter = nullptr;
-	hr = dxgiDevice.As(&dxgiAdapter);
+	hr = dxgiDevice->GetAdapter(dxgiAdapter.GetAddressOf());
 	dxgiDevice = nullptr;
 	if (FAILED(hr))
 	{
@@ -594,10 +526,5 @@ bool DisplayProcessor::CreateSharedSurface(int singleOutput)
 		return false;
 	}
 
-	return true;
-}
-
-bool DisplayProcessor::DrawFrame()
-{
 	return true;
 }

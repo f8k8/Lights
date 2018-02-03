@@ -19,23 +19,10 @@ DuplicationManager::DuplicationManager() :
 
 DuplicationManager::~DuplicationManager()
 {
-	if (m_Duplication)
-	{
-		m_Duplication = nullptr;
-	}
-
-	if (m_AcquiredDesktopImage)
-	{
-		m_AcquiredDesktopImage = nullptr;
-	}
-
-	if (m_Device)
-	{
-		m_Device = nullptr;
-	}
+	
 }
 
-bool DuplicationManager::Init(ComPtr<ID3D11Device> device, unsigned int output)
+bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int outputIndex)
 {
 	// Add a reference to the device
 	m_Device = device;
@@ -50,7 +37,7 @@ bool DuplicationManager::Init(ComPtr<ID3D11Device> device, unsigned int output)
 
 	// Get DXGI adapter
 	ComPtr<IDXGIAdapter> dxgiAdapter = nullptr;
-	hr = dxgiDevice.As(&dxgiAdapter);
+	hr = dxgiDevice->GetAdapter(dxgiAdapter.GetAddressOf());
 	dxgiDevice = nullptr;
 	if (FAILED(hr))
 	{
@@ -59,7 +46,7 @@ bool DuplicationManager::Init(ComPtr<ID3D11Device> device, unsigned int output)
 
 	// Get the output interface
 	ComPtr<IDXGIOutput> dxgiOutput = nullptr;
-	hr = dxgiAdapter->EnumOutputs(output, &dxgiOutput);
+	hr = dxgiAdapter->EnumOutputs(outputIndex, &dxgiOutput);
 	dxgiAdapter = nullptr;
 	if (FAILED(hr))
 	{
