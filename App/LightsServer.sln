@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightsServer", "LightsServer\LightsServer.csproj", "{7FD165D3-AADE-4AB9-9ADC-3FA53B0181B9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CaptureProcessor", "CaptureProcessor\CaptureProcessor.vcxproj", "{8A1AFA18-53F8-4330-9249-A3E7863133CB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7FD165D3-AADE-4AB9-9ADC-3FA53B0181B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FD165D3-AADE-4AB9-9ADC-3FA53B0181B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FD165D3-AADE-4AB9-9ADC-3FA53B0181B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FD165D3-AADE-4AB9-9ADC-3FA53B0181B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A1AFA18-53F8-4330-9249-A3E7863133CB}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{8A1AFA18-53F8-4330-9249-A3E7863133CB}.Debug|Any CPU.Build.0 = Debug|x64
+		{8A1AFA18-53F8-4330-9249-A3E7863133CB}.Release|Any CPU.ActiveCfg = Release|x64
+		{8A1AFA18-53F8-4330-9249-A3E7863133CB}.Release|Any CPU.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7740C1F2-21E8-48DF-8B83-01BBC889F94B}
+	EndGlobalSection
+EndGlobal

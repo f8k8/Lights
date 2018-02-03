@@ -1,0 +1,6 @@
+/App/Build
+/App/.vs
+/App/CaptureProcessor/*.user
+/App/LightsServer/obj
+/App/LightsServer/*.user
+/App/CaptureProcessor/x64
