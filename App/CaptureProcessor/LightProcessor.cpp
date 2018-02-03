@@ -311,7 +311,7 @@ bool LightProcessor::ProcessFrame()
 		// Copy row by row
 		BYTE* lightRow = lightBytes;
 		__int32* outputValues = &m_LightValues[0];
-		for (int rowIndex = 0; rowIndex < m_LightSurfaceHeight; ++rowIndex, lightRow += rowPitch, outputValues += 4 * m_LightSurfaceWidth)
+		for (int rowIndex = 0; rowIndex < m_LightSurfaceHeight; ++rowIndex, lightRow += rowPitch, outputValues += m_LightSurfaceWidth)
 		{
 			memcpy(outputValues, lightRow, 4 * m_LightSurfaceWidth);
 		}
