@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -15,6 +16,9 @@ namespace LightsServer
     {
         DispatcherTimer dispatcherTimer;
         System.IO.Ports.SerialPort outputComPort;
+        int lightColumns = 64;
+        int lightRows = 4;
+        int[] lightValues;
 
         private System.Windows.Forms.NotifyIcon notifyIcon;
 
@@ -47,7 +51,8 @@ namespace LightsServer
             outputComPort = new System.IO.Ports.SerialPort(comPort, 115200, System.IO.Ports.Parity.None, 8, System.IO.Ports.StopBits.One);
             outputComPort.Open();
 
-            if (CaptureProcessor.Start())
+            lightValues = new int[lightColumns * lightRows];
+            if (CaptureProcessor.Start(-1, lightColumns, lightRows))
             {
                 // Start the update timer
                 dispatcherTimer = new DispatcherTimer();
@@ -83,7 +88,23 @@ namespace LightsServer
 
         private void ProcessCapture(object sender, EventArgs e)
         {
-            CaptureProcessor.Process();
+            if(CaptureProcessor.Process())
+            {
+                // Get the values
+                GCHandle handle = GCHandle.Alloc(lightValues, GCHandleType.Pinned);
+                try
+                {
+                    IntPtr pointer = handle.AddrOfPinnedObject();
+                    CaptureProcessor.GetLightValues(pointer, lightValues.Length);
+                }
+                finally
+                {
+                    if (handle.IsAllocated)
+                    {
+                        handle.Free();
+                    }
+                }
+            }
         }
 
         private void NotifyIcon_DoubleClick(object sender, EventArgs e)

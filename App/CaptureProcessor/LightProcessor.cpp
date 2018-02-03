@@ -38,6 +38,8 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 {
 	HRESULT hr;
 
+	m_LightValues.resize(lightTextureWidth * lightTextureHeight);
+
 	// Driver types supported
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -296,10 +298,33 @@ bool LightProcessor::ProcessFrame()
 	}
 
 	BYTE* lightBytes = (BYTE*)mappedResource.pData;
-	unsigned int uiPitch = mappedResource.RowPitch;
+	unsigned int rowPitch = mappedResource.RowPitch;
+
+	// Copy the rows to our light values
+	if (rowPitch == m_LightSurfaceWidth * 4)
+	{
+		// Simple copy as the pitch matches our output
+		memcpy(&m_LightValues[0], lightBytes, m_LightValues.size() * 4);
+	}
+	else
+	{
+		// Copy row by row
+		BYTE* lightRow = lightBytes;
+		__int32* outputValues = &m_LightValues[0];
+		for (int rowIndex = 0; rowIndex < m_LightSurfaceHeight; ++rowIndex, lightRow += rowPitch, outputValues += 4 * m_LightSurfaceWidth)
+		{
+			memcpy(outputValues, lightRow, 4 * m_LightSurfaceWidth);
+		}
+	}
+
 	m_DeviceContext->Unmap(m_StagingLightSurface.Get(), 0);
 
 	return true;
+}
+
+const std::vector<__int32> LightProcessor::GetLightValues() const
+{
+	return m_LightValues;
 }
 
 bool LightProcessor::CreateRenderTarget(unsigned int width, unsigned int height)

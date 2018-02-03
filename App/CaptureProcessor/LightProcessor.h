@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 // Creates and processes the shared surface to extract light values
 class LightProcessor
 {
@@ -15,6 +17,8 @@ public:
 
 	bool ProcessFrame();
 
+	const std::vector<__int32> GetLightValues() const;
+
 private:
 	bool CreateRenderTarget(unsigned int width, unsigned int height);
 	void SetViewPort(unsigned int width, unsigned int height);
@@ -22,6 +26,8 @@ private:
 	bool CreateSharedSurface(int singleOutput);
 
 private:
+	std::vector<__int32>	m_LightValues;
+
 	int						m_OutputCount;
 	RECT					m_DesktopBounds;
 

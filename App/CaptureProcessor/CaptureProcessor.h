@@ -11,8 +11,9 @@ public:
 	CaptureProcessor();
 	~CaptureProcessor();
 
-	bool Start(int singleOutput);
-	void Process();
+	bool Start(int singleOutput, int lightColumns, int lightRows);
+	bool Process();
+	void GetLightValues(__int32* values, int length);
 	void Stop();
 
 private:
@@ -20,6 +21,8 @@ private:
 	bool m_FirstTime;
 
 	int m_SingleOutput;
+	int m_LightColumns;
+	int m_LightRows;
 
 	HANDLE m_UnexpectedErrorEvent;
 	HANDLE m_ExpectedErrorEvent;
