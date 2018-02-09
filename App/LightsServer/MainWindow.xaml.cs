@@ -74,5 +74,11 @@ namespace LightsServer
                 StartStopButton.Content = "Start";
             }
         }
+
+        private void DebugButton_Click(object sender, RoutedEventArgs e)
+        {
+            App currentApp = (App)Application.Current;
+            currentApp.RequestBoardDebugInfo();
+        }
     }
 }

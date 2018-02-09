@@ -26,6 +26,11 @@
             <ComboBox Grid.Column="1" Grid.Row="0" Name="COMPortDropdown" />
 
             <Button Width="Auto" Height="Auto" HorizontalAlignment="Right" 
+                    Content="Debug" MinWidth="80" Margin="3" Grid.Column="0" Grid.Row="2"
+                    Name="DebugButton"
+                    Click="DebugButton_Click" />
+
+            <Button Width="Auto" Height="Auto" HorizontalAlignment="Right" 
                     Content="Start" MinWidth="80" Margin="3" Grid.Column="2" Grid.Row="2"
                     Name="StartStopButton"
                     Click="StartStopButton_Click" />

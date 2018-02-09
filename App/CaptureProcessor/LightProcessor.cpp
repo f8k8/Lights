@@ -196,7 +196,7 @@ const RECT& LightProcessor::GetDesktopBounds() const
 
 bool LightProcessor::ProcessFrame()
 {
-	HRESULT hr = m_KeyMutex->AcquireSync(1, 100);
+	HRESULT hr = m_KeyMutex->AcquireSync(1, 34);
 	if (hr == static_cast<HRESULT>(WAIT_TIMEOUT))
 	{
 		// Another thread has the keyed mutex so try again later

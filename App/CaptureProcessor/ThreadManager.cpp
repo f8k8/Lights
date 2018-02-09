@@ -121,7 +121,7 @@ public:
 
 			// We have a new frame so try and process it
 			// Try to acquire keyed mutex in order to access shared surface
-			hr = m_KeyMutex->AcquireSync(0, 1000);
+			hr = m_KeyMutex->AcquireSync(0, 34);
 			if (hr == static_cast<HRESULT>(WAIT_TIMEOUT))
 			{
 				// Can't use shared surface right now, try again later

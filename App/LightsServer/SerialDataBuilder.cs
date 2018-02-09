@@ -19,11 +19,10 @@ namespace LightsServer
 
         public static byte[] LightData(int[] lightValues)
         {
-            // 3 bytes per light, plus 1 for the control character
-            byte[] lightData = new byte[lightValues.Length * 3 + 1];
-            lightData[0] = (byte)'L';
+            // 3 bytes per light
+            byte[] lightData = new byte[lightValues.Length * 3];
 
-            var byteIndex = 1;
+            var byteIndex = 0;
             for(var lightIndex = 0; lightIndex < lightValues.Length; ++lightIndex)
             {
                 // Extract the R, G and B bytes from the light values
