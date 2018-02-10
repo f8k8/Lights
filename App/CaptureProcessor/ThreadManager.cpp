@@ -121,7 +121,7 @@ public:
 
 			// We have a new frame so try and process it
 			// Try to acquire keyed mutex in order to access shared surface
-			hr = m_KeyMutex->AcquireSync(0, 34);
+			hr = m_KeyMutex->AcquireSync(0, 100);
 			if (hr == static_cast<HRESULT>(WAIT_TIMEOUT))
 			{
 				// Can't use shared surface right now, try again later
@@ -142,12 +142,12 @@ public:
 			if(!m_ScreenProcessor->ProcessFrame(*m_DuplicationManager, m_SharedSurface, threadData->offsetX, threadData->offsetY))
 			{
 				m_DuplicationManager->ReleaseFrame();
-				m_KeyMutex->ReleaseSync(1);
+				m_KeyMutex->ReleaseSync(0);
 				break;
 			}
 
 			// Release acquired keyed mutex
-			hr = m_KeyMutex->ReleaseSync(1);
+			hr = m_KeyMutex->ReleaseSync(0);
 			if (FAILED(hr))
 			{
 				m_DuplicationManager->ReleaseFrame();

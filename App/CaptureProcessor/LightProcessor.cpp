@@ -6,6 +6,9 @@
 
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "DownsamplePixelShader.h"
+
+#include "DirectXResources.h"
 
 using namespace Microsoft::WRL;
 
@@ -142,8 +145,8 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	blendStateDescription.AlphaToCoverageEnable = FALSE;
 	blendStateDescription.IndependentBlendEnable = FALSE;
 	blendStateDescription.RenderTarget[0].BlendEnable = TRUE;
-	blendStateDescription.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	blendStateDescription.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendStateDescription.RenderTarget[0].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
+	blendStateDescription.RenderTarget[0].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
 	blendStateDescription.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
 	blendStateDescription.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
 	blendStateDescription.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
@@ -196,7 +199,7 @@ const RECT& LightProcessor::GetDesktopBounds() const
 
 bool LightProcessor::ProcessFrame()
 {
-	HRESULT hr = m_KeyMutex->AcquireSync(1, 34);
+	HRESULT hr = m_KeyMutex->AcquireSync(0, 100);
 	if (hr == static_cast<HRESULT>(WAIT_TIMEOUT))
 	{
 		// Another thread has the keyed mutex so try again later
@@ -245,15 +248,15 @@ bool LightProcessor::ProcessFrame()
 	unsigned int stride = sizeof(Vertex);
 	unsigned int offset = 0;
 	m_DeviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
-
+	
 	// Create a shader resource view for the source
 	D3D11_TEXTURE2D_DESC textureDescription;
 	m_SharedSurface->GetDesc(&textureDescription);
 	D3D11_SHADER_RESOURCE_VIEW_DESC shaderDesc;
 	shaderDesc.Format = textureDescription.Format;
 	shaderDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	shaderDesc.Texture2D.MostDetailedMip = textureDescription.MipLevels - 1;
-	shaderDesc.Texture2D.MipLevels = textureDescription.MipLevels;
+	shaderDesc.Texture2D.MostDetailedMip = 0;// textureDescription.MipLevels - 1;
+	shaderDesc.Texture2D.MipLevels = -1;// textureDescription.MipLevels;
 
 	ComPtr<ID3D11ShaderResourceView> shaderResource = nullptr;
 	hr = m_Device->CreateShaderResourceView(m_SharedSurface.Get(), &shaderDesc, &shaderResource);
@@ -266,14 +269,46 @@ bool LightProcessor::ProcessFrame()
 		return false;
 	}
 
+	m_DeviceContext->GenerateMips(shaderResource.Get());
+
+	// Create the constant buffer
+	D3D11_BUFFER_DESC constantBufferDesc;
+	RtlZeroMemory(&constantBufferDesc, sizeof(constantBufferDesc));
+	constantBufferDesc.ByteWidth = sizeof(DownsamplePixelShaderConstants);
+	constantBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.CPUAccessFlags = 0;
+	constantBufferDesc.MiscFlags = 0;
+	constantBufferDesc.StructureByteStride = 0;
+
+	// Fill in the subresource data
+	DownsamplePixelShaderConstants constants;
+	constants.SampleWidth = 1.0f / (float)m_LightSurfaceWidth;
+	constants.SampleHeight = 1.0f / (float)m_LightSurfaceHeight;
+	D3D11_SUBRESOURCE_DATA constantBufferInitData;
+	constantBufferInitData.pSysMem = &constants;
+	constantBufferInitData.SysMemPitch = 0;
+	constantBufferInitData.SysMemSlicePitch = 0;
+
+	// Create the buffer
+	ComPtr<ID3D11Buffer> constantBuffer = nullptr;
+	hr = m_Device->CreateBuffer(&constantBufferDesc, &constantBufferInitData, &constantBuffer);
+	if (FAILED(hr))
+	{
+		m_KeyMutex->ReleaseSync(0);
+
+		return false;
+	}
+
 	// Set up shader / blending states
-	FLOAT blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-	m_DeviceContext->OMSetBlendState(nullptr, blendFactor, 0xFFFFFFFF);
+	FLOAT blendFactor[4] = { 0.7f, 0.7f, 0.7f, 1.0f };
+	m_DeviceContext->OMSetBlendState(m_BlendState.Get(), blendFactor, 0xFFFFFFFF);
 	m_DeviceContext->OMSetRenderTargets(1, m_RTV.GetAddressOf(), nullptr);
 	m_DeviceContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
 	m_DeviceContext->PSSetShader(m_PixelShader.Get(), nullptr, 0);
 	m_DeviceContext->PSSetShaderResources(0, 1, shaderResource.GetAddressOf());
 	m_DeviceContext->PSSetSamplers(0, 1, m_SamplerLinear.GetAddressOf());
+	m_DeviceContext->PSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
 	m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	// Draw the vertices
@@ -300,18 +335,19 @@ bool LightProcessor::ProcessFrame()
 	BYTE* lightBytes = (BYTE*)mappedResource.pData;
 	unsigned int rowPitch = mappedResource.RowPitch;
 
-	// Copy the rows to our light values
-	if (rowPitch == m_LightSurfaceWidth * 4)
+	// Copy the rows to our light values (reversing every odd row)
+	BYTE* lightRow = lightBytes;
+	__int32* outputValues = &m_LightValues[0];
+	for (int rowIndex = 0; rowIndex < m_LightSurfaceHeight; ++rowIndex, lightRow += rowPitch, outputValues += m_LightSurfaceWidth)
 	{
-		// Simple copy as the pitch matches our output
-		memcpy(&m_LightValues[0], lightBytes, m_LightValues.size() * 4);
-	}
-	else
-	{
-		// Copy row by row
-		BYTE* lightRow = lightBytes;
-		__int32* outputValues = &m_LightValues[0];
-		for (int rowIndex = 0; rowIndex < m_LightSurfaceHeight; ++rowIndex, lightRow += rowPitch, outputValues += m_LightSurfaceWidth)
+		if ((rowIndex % 2) == 1)
+		{
+			for (int column = 0, textureColumn = m_LightSurfaceWidth - 1; column < m_LightSurfaceWidth; ++column, --textureColumn)
+			{
+				outputValues[column] = ((__int32*)lightRow)[textureColumn];
+			}
+		}
+		else
 		{
 			memcpy(outputValues, lightRow, 4 * m_LightSurfaceWidth);
 		}
@@ -376,7 +412,7 @@ bool LightProcessor::CreateRenderTarget(unsigned int width, unsigned int height)
 	{
 		return false;
 	}
-
+	
 	return true;
 }
 
@@ -416,8 +452,8 @@ bool LightProcessor::InitShaders()
 	}
 	m_DeviceContext->IASetInputLayout(m_InputLayout.Get());
 
-	size = ARRAYSIZE(g_PS);
-	hr = m_Device->CreatePixelShader(g_PS, size, nullptr, &m_PixelShader);
+	size = ARRAYSIZE(g_DownSamplePS);
+	hr = m_Device->CreatePixelShader(g_DownSamplePS, size, nullptr, &m_PixelShader);
 	if (FAILED(hr))
 	{
 		return false;
@@ -511,14 +547,14 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 	RtlZeroMemory(&desktopTextureDescription, sizeof(D3D11_TEXTURE2D_DESC));
 	desktopTextureDescription.Width = m_DesktopBounds.right - m_DesktopBounds.left;
 	desktopTextureDescription.Height = m_DesktopBounds.bottom - m_DesktopBounds.top;
-	desktopTextureDescription.MipLevels = 1;
+	desktopTextureDescription.MipLevels = 12;
 	desktopTextureDescription.ArraySize = 1;
 	desktopTextureDescription.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	desktopTextureDescription.SampleDesc.Count = 1;
 	desktopTextureDescription.Usage = D3D11_USAGE_DEFAULT;
 	desktopTextureDescription.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	desktopTextureDescription.CPUAccessFlags = 0;
-	desktopTextureDescription.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+	desktopTextureDescription.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX | D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
 	hr = m_Device->CreateTexture2D(&desktopTextureDescription, nullptr, &m_SharedSurface);
 	if (FAILED(hr))

@@ -19,7 +19,11 @@ DuplicationManager::DuplicationManager() :
 
 DuplicationManager::~DuplicationManager()
 {
-	
+	if (m_AcquiredDesktopImage)
+	{
+		// Release the last frame
+		m_Duplication->ReleaseFrame();
+	}
 }
 
 bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int outputIndex)
@@ -83,6 +87,17 @@ bool DuplicationManager::GetFrame(bool* timeout)
 	m_MoveCount = 0;
 	m_DirtyCount = 0;
 
+	if (m_AcquiredDesktopImage)
+	{
+		m_AcquiredDesktopImage = nullptr;
+
+		HRESULT hr = m_Duplication->ReleaseFrame();
+		if (FAILED(hr))
+		{
+			return false;
+		}
+	}
+
 	// Get new frame
 	HRESULT hr = m_Duplication->AcquireNextFrame(500, &frameInfo, &desktopResource);
 	if (hr == DXGI_ERROR_WAIT_TIMEOUT)
@@ -97,17 +112,12 @@ bool DuplicationManager::GetFrame(bool* timeout)
 		return false;
 	}
 
-	// If we're still holding old frame, destroy it
-	if (m_AcquiredDesktopImage)
-	{
-		m_AcquiredDesktopImage = nullptr;
-	}
-
 	// Get the IDXGIResource interface
 	hr = desktopResource.As(&m_AcquiredDesktopImage);
 	desktopResource = nullptr;
 	if (FAILED(hr))
 	{
+		m_Duplication->ReleaseFrame();
 		return false;
 	}
 
@@ -127,6 +137,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 		hr = m_Duplication->GetFrameMoveRects(bufferSize, reinterpret_cast<DXGI_OUTDUPL_MOVE_RECT*>(&m_Metadata[0]), &bufferSize);
 		if (FAILED(hr))
 		{
+			m_Duplication->ReleaseFrame();
 			return false;
 		}
 		m_MoveCount = bufferSize / sizeof(DXGI_OUTDUPL_MOVE_RECT);
@@ -137,6 +148,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 		hr = m_Duplication->GetFrameDirtyRects(bufferSize, reinterpret_cast<RECT*>(m_DirtyRects), &bufferSize);
 		if (FAILED(hr))
 		{
+			m_Duplication->ReleaseFrame();
 			return false;
 		}
 		m_DirtyCount = bufferSize / sizeof(RECT);
@@ -147,17 +159,6 @@ bool DuplicationManager::GetFrame(bool* timeout)
 
 bool DuplicationManager::ReleaseFrame()
 {
-	HRESULT hr = m_Duplication->ReleaseFrame();
-	if (FAILED(hr))
-	{
-		return false;
-	}
-
-	if (m_AcquiredDesktopImage)
-	{
-		m_AcquiredDesktopImage = nullptr;
-	}
-
 	m_DirtyRects = nullptr;
 	m_DirtyCount = 0;
 	m_MoveRects = nullptr;

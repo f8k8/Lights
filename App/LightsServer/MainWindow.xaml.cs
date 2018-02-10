@@ -56,6 +56,8 @@ namespace LightsServer
                 if (COMPortDropdown.SelectedItem != null)
                 {
                     currentApp.StartCapturing((string)COMPortDropdown.SelectedItem);
+
+                    PreviewImage.Source = currentApp.PreviewImage;
                 }
             }
 

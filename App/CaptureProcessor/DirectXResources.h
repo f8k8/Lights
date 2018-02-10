@@ -10,3 +10,10 @@ struct DirectXResources
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerLinear;
 };
+
+struct DownsamplePixelShaderConstants
+{
+	float SampleWidth;
+	float SampleHeight;
+	float padding[2];
+};

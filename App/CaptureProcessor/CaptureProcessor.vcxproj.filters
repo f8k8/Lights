@@ -75,5 +75,6 @@
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl" />
     <FxCompile Include="VertexShader.hlsl" />
+    <FxCompile Include="DownsamplePixelShader.hlsl" />
   </ItemGroup>
 </Project>

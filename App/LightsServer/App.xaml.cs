@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace LightsServer
@@ -27,7 +30,7 @@ namespace LightsServer
         long keepaliveTimer;
 
         DispatcherTimer lightProcessorTimer;
-        int lightColumns = 96;
+        int lightColumns = 100;
         int lightRows = 3;
         int[] lightValues;
         bool lightsUpdated;
@@ -37,6 +40,12 @@ namespace LightsServer
         bool boardIsAlive;
 
         private System.Windows.Forms.NotifyIcon notifyIcon;
+
+        public WriteableBitmap PreviewImage
+        {
+            get;
+            set;
+        }
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -75,10 +84,12 @@ namespace LightsServer
             lightValues = new int[lightColumns * lightRows];
             if (CaptureProcessor.Start(-1, lightColumns, lightRows))
             {
+                PreviewImage = new WriteableBitmap(lightColumns, lightRows, 72, 72, System.Windows.Media.PixelFormats.Bgr32, null);
+
                 // Start the update timer
                 lightProcessorTimer = new DispatcherTimer();
                 lightProcessorTimer.Tick += ProcessCapture; ;
-                lightProcessorTimer.Interval = new TimeSpan(0, 0, 0, 0, 1);
+                lightProcessorTimer.Interval = new TimeSpan(0, 0, 0, 0, 16);
                 lightProcessorTimer.Start();
             }
         }
@@ -136,7 +147,14 @@ namespace LightsServer
 
                     case 'D':
                         {
-                            System.Diagnostics.Debug.WriteLine(outputComPort.ReadLine());
+                            try
+                            {
+                                System.Diagnostics.Debug.WriteLine(outputComPort.ReadLine());
+                            }
+                            catch(Exception ex)
+                            {
+                                
+                            }
                             keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
                         }
                         break;
@@ -190,6 +208,36 @@ namespace LightsServer
                         handle.Free();
                     }
                 }
+
+                // Update the preview image
+                PreviewImage.Lock();
+                unsafe
+                {
+                    int backbuffer = (int)PreviewImage.BackBuffer;
+
+                    var lightIndex = 0;
+                    for(var row = 0; row < lightRows; ++row)
+                    {
+                        var currentPixel = backbuffer + (row * PreviewImage.BackBufferStride);
+                        var direction = 1;
+
+                        // Need to reverse  direction on odd rows to compensate for the reversing
+                        // done in the capture library
+                        if (row % 2 == 1)
+                        {
+                            direction = -1;
+                            currentPixel += 4 * (lightColumns - 1);
+                        }
+
+                        for (var column = 0; column < lightColumns; ++column, ++lightIndex, currentPixel += direction * 4)
+                        {
+                            *((int*)currentPixel) = lightValues[lightIndex];
+                        }
+                    }
+                }
+                Int32Rect dirtyRect = new Int32Rect(0, 0, lightColumns, lightRows);
+                PreviewImage.AddDirtyRect(dirtyRect);
+                PreviewImage.Unlock();
             }
 
             if (boardIsAlive && outputComPort != null)
