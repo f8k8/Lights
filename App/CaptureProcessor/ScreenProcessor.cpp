@@ -17,7 +17,9 @@ m_VertexShader(nullptr),
 m_PixelShader(nullptr),
 m_InputLayout(nullptr),
 m_RTV(nullptr),
-m_SamplerLinear(nullptr)
+m_SamplerLinear(nullptr),
+m_UnexpectedErrorEvent(nullptr),
+m_ExpectedErrorEvent(nullptr)
 {
 }
 
@@ -32,9 +34,12 @@ ScreenProcessor::~ScreenProcessor()
 //
 // Initialize D3D variables
 //
-bool ScreenProcessor::Initialise()
+bool ScreenProcessor::Initialise(HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent)
 {
 	HRESULT hr = S_OK;
+
+	m_UnexpectedErrorEvent = unexpectedErrorEvent;
+	m_ExpectedErrorEvent = expectedErrorEvent;
 
 	// Driver types supported
 	D3D_DRIVER_TYPE driverTypes[] =
@@ -76,6 +81,7 @@ bool ScreenProcessor::Initialise()
 	}
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, nullptr, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -84,6 +90,7 @@ bool ScreenProcessor::Initialise()
 	hr = m_Device->CreateVertexShader(g_VS, size, nullptr, &m_VertexShader);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -97,6 +104,7 @@ bool ScreenProcessor::Initialise()
 	hr = m_Device->CreateInputLayout(layout, numElements, g_VS, size, &m_InputLayout);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 	m_DeviceContext->IASetInputLayout(m_InputLayout.Get());
@@ -106,6 +114,7 @@ bool ScreenProcessor::Initialise()
 	hr = m_Device->CreatePixelShader(g_PS, size, nullptr, &m_PixelShader);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -122,6 +131,7 @@ bool ScreenProcessor::Initialise()
 	hr = m_Device->CreateSamplerState(&SampDesc, &m_SamplerLinear);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -184,6 +194,7 @@ bool ScreenProcessor::ProcessMoves(ComPtr<ID3D11Texture2D> sharedSurface, DXGI_O
 		HRESULT hr = m_Device->CreateTexture2D(&moveDescription, nullptr, &m_MoveSurface);
 		if (FAILED(hr))
 		{
+			SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 			return false;
 		}
 	}
@@ -308,6 +319,7 @@ bool ScreenProcessor::ProcessDirty(ComPtr<ID3D11Texture2D> sourceSurface, ComPtr
 		hr = m_Device->CreateRenderTargetView(sharedSurface.Get(), nullptr, &m_RTV);
 		if (FAILED(hr))
 		{
+			SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 			return false;
 		}
 	}
@@ -323,6 +335,7 @@ bool ScreenProcessor::ProcessDirty(ComPtr<ID3D11Texture2D> sourceSurface, ComPtr
 	hr = m_Device->CreateShaderResourceView(sourceSurface.Get(), &shaderDesc, &shaderResource);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -372,6 +385,7 @@ bool ScreenProcessor::ProcessDirty(ComPtr<ID3D11Texture2D> sourceSurface, ComPtr
 	hr = m_Device->CreateBuffer(&bufferDesc, &initData, &vertexBuffer);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 	unsigned int stride = sizeof(Vertex);

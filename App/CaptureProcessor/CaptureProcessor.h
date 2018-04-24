@@ -13,6 +13,7 @@ public:
 
 	bool Start(int singleOutput, int lightColumns, int lightRows);
 	bool Process();
+	bool IsRunning();
 	void GetLightValues(__int32* values, int length);
 	void Stop();
 

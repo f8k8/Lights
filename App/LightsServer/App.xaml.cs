@@ -265,6 +265,12 @@ namespace LightsServer
                     }
                 }
             }
+
+            // If we've stopped capturing (because of an error), then make sure to stop the updates
+            if(!CaptureProcessor.IsRunning())
+            {
+                StopCapturing();
+            }
         }
 
         internal void RequestBoardDebugInfo()

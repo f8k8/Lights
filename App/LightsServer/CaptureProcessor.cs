@@ -15,6 +15,9 @@ namespace LightsServer
         public static extern bool Process();
 
         [DllImport("CaptureProcessor.dll")]
+        public static extern bool IsRunning();
+
+        [DllImport("CaptureProcessor.dll")]
         public static extern void GetLightValues(IntPtr values, int length);
 
         [DllImport("CaptureProcessor.dll")]

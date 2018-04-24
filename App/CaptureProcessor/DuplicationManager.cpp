@@ -11,7 +11,9 @@ DuplicationManager::DuplicationManager() :
 	m_DirtyRects(nullptr),
 	m_DirtyCount(0),
 	m_MoveRects(nullptr),
-	m_MoveCount(0)
+	m_MoveCount(0),
+	m_UnexpectedErrorEvent(nullptr),
+	m_ExpectedErrorEvent(nullptr)
 {
 	RtlZeroMemory(&m_OutputDesc, sizeof(m_OutputDesc));
 	RtlZeroMemory(&m_FrameInfo, sizeof(m_FrameInfo));
@@ -26,16 +28,20 @@ DuplicationManager::~DuplicationManager()
 	}
 }
 
-bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int outputIndex)
+bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int outputIndex, HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent)
 {
 	// Add a reference to the device
 	m_Device = device;
+
+	m_UnexpectedErrorEvent = unexpectedErrorEvent;
+	m_ExpectedErrorEvent = expectedErrorEvent;
 
 	// Get DXGI device
 	ComPtr<IDXGIDevice> dxgiDevice = nullptr;
 	HRESULT hr = m_Device.As(&dxgiDevice);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, nullptr, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -45,6 +51,7 @@ bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int ou
 	dxgiDevice = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -54,6 +61,7 @@ bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int ou
 	dxgiAdapter = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, EnumOutputsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -65,6 +73,7 @@ bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int ou
 	dxgiOutput = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, nullptr, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -73,6 +82,7 @@ bool DuplicationManager::Initialise(ComPtr<ID3D11Device> device, unsigned int ou
 	dxgiOutput1 = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, CreateDuplicationExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -94,6 +104,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 		HRESULT hr = m_Duplication->ReleaseFrame();
 		if (FAILED(hr))
 		{
+			SetAppropriateEvent(hr, FrameInfoExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 			return false;
 		}
 	}
@@ -109,6 +120,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, FrameInfoExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -117,6 +129,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 	desktopResource = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, nullptr, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		m_Duplication->ReleaseFrame();
 		return false;
 	}
@@ -138,6 +151,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 		if (FAILED(hr))
 		{
 			m_Duplication->ReleaseFrame();
+			SetAppropriateEvent(hr, FrameInfoExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 			return false;
 		}
 		m_MoveCount = bufferSize / sizeof(DXGI_OUTDUPL_MOVE_RECT);
@@ -149,6 +163,7 @@ bool DuplicationManager::GetFrame(bool* timeout)
 		if (FAILED(hr))
 		{
 			m_Duplication->ReleaseFrame();
+			SetAppropriateEvent(hr, FrameInfoExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 			return false;
 		}
 		m_DirtyCount = bufferSize / sizeof(RECT);

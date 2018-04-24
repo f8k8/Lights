@@ -9,7 +9,7 @@ public:
 	LightProcessor();
 	~LightProcessor();
 
-	bool Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight);
+	bool Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight, HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent);
 	HANDLE GetSharedSurfaceHandle();
 
 	int GetOutputCount() const;
@@ -30,6 +30,9 @@ private:
 
 	int						m_OutputCount;
 	RECT					m_DesktopBounds;
+
+	HANDLE					m_UnexpectedErrorEvent;
+	HANDLE					m_ExpectedErrorEvent;
 
 	// The device
 	Microsoft::WRL::ComPtr<ID3D11Device>	m_Device;

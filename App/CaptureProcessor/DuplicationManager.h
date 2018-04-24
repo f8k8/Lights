@@ -9,7 +9,7 @@ public:
 	DuplicationManager();
 	~DuplicationManager();
 
-	bool Initialise(Microsoft::WRL::ComPtr<ID3D11Device> device, unsigned int outputIndex);
+	bool Initialise(Microsoft::WRL::ComPtr<ID3D11Device> device, unsigned int outputIndex, HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent);
 	bool GetFrame(bool* timeout);
 	bool ReleaseFrame();
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> GetTexture() const;
@@ -22,6 +22,9 @@ public:
 	const DXGI_OUTPUT_DESC& GetOutputDesc() const;
 
 private:
+	HANDLE					m_UnexpectedErrorEvent;
+	HANDLE					m_ExpectedErrorEvent;
+
 	// D3D device
 	Microsoft::WRL::ComPtr<ID3D11Device>					m_Device;
 

@@ -61,9 +61,8 @@ public:
 		}
 
 		// New display manager
-		if (!m_ScreenProcessor->Initialise())
+		if (!m_ScreenProcessor->Initialise(threadData->unexpectedErrorEvent, threadData->expectedErrorEvent))
 		{
-			SetEvent(threadData->unexpectedErrorEvent);
 			return;
 		}
 
@@ -71,21 +70,20 @@ public:
 		HRESULT hr = m_ScreenProcessor->GetDevice()->OpenSharedResource(threadData->texSharedHandle, __uuidof(ID3D11Texture2D), &m_SharedSurface);
 		if (FAILED(hr))
 		{
-			SetEvent(threadData->unexpectedErrorEvent);
+			SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, threadData->expectedErrorEvent, threadData->unexpectedErrorEvent);
 			return;
 		}
 
 		hr = m_SharedSurface.As(&m_KeyMutex);
 		if (FAILED(hr))
 		{
-			SetEvent(threadData->unexpectedErrorEvent);
+			SetAppropriateEvent(hr, nullptr, threadData->expectedErrorEvent, threadData->unexpectedErrorEvent);
 			return;
 		}
 
 		// Make duplication manager
-		if(!m_DuplicationManager->Initialise(m_ScreenProcessor->GetDevice(), threadData->output))
+		if(!m_DuplicationManager->Initialise(m_ScreenProcessor->GetDevice(), threadData->output, threadData->unexpectedErrorEvent, threadData->expectedErrorEvent))
 		{
-			SetEvent(threadData->unexpectedErrorEvent);
 			return;
 		}
 		
@@ -132,6 +130,7 @@ public:
 			{
 				// Generic unknown failure
 				m_DuplicationManager->ReleaseFrame();
+				SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, threadData->expectedErrorEvent, threadData->unexpectedErrorEvent);
 				break;
 			}
 
@@ -151,6 +150,7 @@ public:
 			if (FAILED(hr))
 			{
 				m_DuplicationManager->ReleaseFrame();
+				SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, threadData->expectedErrorEvent, threadData->unexpectedErrorEvent);
 				break;
 			}
 
@@ -160,9 +160,6 @@ public:
 				break;
 			}
 		}
-
-		// Unexpected error so exit the application
-		SetEvent(threadData->unexpectedErrorEvent);
 	}
 
 private:
@@ -231,7 +228,9 @@ bool ThreadManager::Initialise(int singleOutput, unsigned int outputCount, HANDL
 		m_ThreadHandles[threadIndex] = CreateThread(nullptr, 0, DuplicationThreadProc, &m_ThreadData[threadIndex], 0, &threadID);
 		if (m_ThreadHandles[threadIndex] == nullptr)
 		{
-			false;
+			m_ThreadCount = threadIndex;
+			m_ThreadHandles.resize(m_ThreadCount);
+			return false;
 		}
 	}
 

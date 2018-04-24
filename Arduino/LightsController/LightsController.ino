@@ -39,6 +39,9 @@
 #include <platforms.h>
 #include <power_mgt.h>
 
+// Power supply config
+#define POWER_SUPPLY_PIN 4
+
 // LED type config
 #define LED_TYPE WS2812B
 #define LED_PIN 5
@@ -97,6 +100,9 @@ void setup()
   // Start the serial port
   Serial.begin(288000);
 
+  // Set PIN 4 as output to control the relay
+  pinMode(POWER_SUPPLY_PIN, OUTPUT);
+
   // Power-up safety delay
   delay(3000);
 
@@ -148,6 +154,10 @@ void loop()
       LEDCount = 0;
     }
 
+    // Turn off the power supply
+    digitalWrite(POWER_SUPPLY_PIN, LOW);
+    delay(1000);
+
     CurrentSerialMode = Initialise;
     SerialTimeoutTime = millis() + SERIAL_TIME_BETWEEN_HELLO_MILLIS;
   }
@@ -178,6 +188,10 @@ void loop()
                   // Read out our config
                   LEDCount = SerialBuffer[1] * SerialBuffer[2];
                   CurrentSerialMode = Waiting;
+
+                  // Turn on our power supply
+                  digitalWrite(POWER_SUPPLY_PIN, HIGH);
+                  delay(1000);
     
                   // Reset our timeout
                   SerialTimeoutTime = millis() + SERIAL_INPUT_TIMEOUT_MILLIS;

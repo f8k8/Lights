@@ -14,7 +14,7 @@ class ScreenProcessor
 public:
 	ScreenProcessor();
 	~ScreenProcessor();
-	bool Initialise();
+	bool Initialise(HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent);
 	Microsoft::WRL::ComPtr<ID3D11Device> GetDevice() const;
 	bool ProcessFrame(const DuplicationManager& duplicationManager, Microsoft::WRL::ComPtr<ID3D11Texture2D> sharedSurface, int offsetX, int offsetY);
 
@@ -50,4 +50,7 @@ private:
 
 	// Vertex buffer for dirty rects
 	std::vector<Vertex>		m_DirtyRectVertices;
+
+	HANDLE					m_UnexpectedErrorEvent;
+	HANDLE					m_ExpectedErrorEvent;
 };

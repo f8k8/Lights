@@ -27,7 +27,9 @@ LightProcessor::LightProcessor() :
 	m_StagingLightSurface(nullptr),
 	m_KeyMutex(nullptr),
 	m_LightSurfaceWidth(0),
-	m_LightSurfaceHeight(0)
+	m_LightSurfaceHeight(0),
+	m_UnexpectedErrorEvent(nullptr),
+	m_ExpectedErrorEvent(nullptr)
 {
 
 }
@@ -37,9 +39,12 @@ LightProcessor::~LightProcessor()
 	
 }
 
-bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight)
+bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight, HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent)
 {
 	HRESULT hr;
+
+	m_ExpectedErrorEvent = expectedErrorEvent;
+	m_UnexpectedErrorEvent = unexpectedErrorEvent;
 
 	m_LightValues.resize(lightTextureWidth * lightTextureHeight);
 
@@ -81,6 +86,7 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	}
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, expectedErrorEvent, unexpectedErrorEvent);
 		return false;
 	}
 
@@ -89,6 +95,7 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	hr = m_Device.As(&dxgiDevice);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, nullptr, expectedErrorEvent, unexpectedErrorEvent);
 		return false;
 	}
 
@@ -97,6 +104,7 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	dxgiDevice = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, expectedErrorEvent, unexpectedErrorEvent);
 		return false;
 	}
 
@@ -104,6 +112,7 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	dxgiAdapter = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, expectedErrorEvent, unexpectedErrorEvent);
 		return false;
 	}
 
@@ -137,6 +146,7 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	hr = m_Device->CreateSamplerState(&samplerDescription, &m_SamplerLinear);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, expectedErrorEvent, unexpectedErrorEvent);
 		return false;
 	}
 
@@ -155,6 +165,7 @@ bool LightProcessor::Initialise(int singleOutput, int lightTextureWidth, int lig
 	hr = m_Device->CreateBlendState(&blendStateDescription, &m_BlendState);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, expectedErrorEvent, unexpectedErrorEvent);
 		return false;
 	}
 
@@ -207,6 +218,7 @@ bool LightProcessor::ProcessFrame()
 	}
 	else if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -243,6 +255,8 @@ bool LightProcessor::ProcessFrame()
 	if (FAILED(hr))
 	{
 		m_KeyMutex->ReleaseSync(0);
+
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 	unsigned int stride = sizeof(Vertex);
@@ -266,6 +280,7 @@ bool LightProcessor::ProcessFrame()
 
 		m_KeyMutex->ReleaseSync(0);
 
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -297,6 +312,7 @@ bool LightProcessor::ProcessFrame()
 	{
 		m_KeyMutex->ReleaseSync(0);
 
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -329,6 +345,7 @@ bool LightProcessor::ProcessFrame()
 	hr = m_DeviceContext->Map(m_StagingLightSurface.Get(), 0, eMapType, NULL, &mappedResource);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return true;
 	}
 
@@ -381,6 +398,7 @@ bool LightProcessor::CreateRenderTarget(unsigned int width, unsigned int height)
 	HRESULT hr = m_Device->CreateTexture2D(&lightTextureDescription, nullptr, &m_LightSurface);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -388,6 +406,7 @@ bool LightProcessor::CreateRenderTarget(unsigned int width, unsigned int height)
 	hr = m_Device->CreateRenderTargetView(m_LightSurface.Get(), nullptr, &m_RTV);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -410,6 +429,7 @@ bool LightProcessor::CreateRenderTarget(unsigned int width, unsigned int height)
 	hr = m_Device->CreateTexture2D(&stagingTextureDescription, nullptr, &m_StagingLightSurface);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 	
@@ -436,6 +456,7 @@ bool LightProcessor::InitShaders()
 	hr = m_Device->CreateVertexShader(g_VS, size, nullptr, &m_VertexShader);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -448,6 +469,7 @@ bool LightProcessor::InitShaders()
 	hr = m_Device->CreateInputLayout(layout, numElements, g_VS, size, &m_InputLayout);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 	m_DeviceContext->IASetInputLayout(m_InputLayout.Get());
@@ -456,6 +478,7 @@ bool LightProcessor::InitShaders()
 	hr = m_Device->CreatePixelShader(g_DownSamplePS, size, nullptr, &m_PixelShader);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -471,6 +494,7 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 	hr = m_Device.As(&dxgiDevice);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -479,6 +503,7 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 	dxgiDevice = nullptr;
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -519,6 +544,7 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 		if (FAILED(hr))
 		{
 			dxgiAdapter = nullptr;
+			SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 			return false;
 		}
 		DXGI_OUTPUT_DESC desktopDescription;
@@ -559,6 +585,7 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 	hr = m_Device->CreateTexture2D(&desktopTextureDescription, nullptr, &m_SharedSurface);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -566,6 +593,7 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 	hr = m_SharedSurface.As(&m_KeyMutex);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 
@@ -584,6 +612,7 @@ bool LightProcessor::CreateSharedSurface(int singleOutput)
 	hr = m_Device->CreateTexture2D(&stagingTextureDescription, nullptr, &m_StagingLightSurface);
 	if (FAILED(hr))
 	{
+		SetAppropriateEvent(hr, SystemTransitionsExpectedErrors, m_ExpectedErrorEvent, m_UnexpectedErrorEvent);
 		return false;
 	}
 

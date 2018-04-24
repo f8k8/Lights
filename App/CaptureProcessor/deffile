@@ -2,5 +2,6 @@ LIBRARY
 EXPORTS
 	Start
 	Process
+	IsRunning
 	GetLightValues
 	Stop
