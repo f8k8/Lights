@@ -44,6 +44,9 @@ namespace LightsServer
 
         private System.Windows.Forms.NotifyIcon notifyIcon;
 
+        // The main window
+        MainWindow mainWindow;
+
         public WriteableBitmap PreviewImage
         {
             get;
@@ -58,8 +61,18 @@ namespace LightsServer
             notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
             notifyIcon.Icon = LightsServer.Properties.Resources.TrayIcon;
             notifyIcon.Visible = true;
+            System.Windows.Forms.MenuItem exitButton = new System.Windows.Forms.MenuItem("Exit");
+            exitButton.Click += new EventHandler(Exit_Clicked);
+            notifyIcon.ContextMenu = new System.Windows.Forms.ContextMenu(new System.Windows.Forms.MenuItem[] {
+                exitButton
+            });
         }
         
+        private void Exit_Clicked(object sender, EventArgs e)
+        {
+            System.Windows.Application.Current.Shutdown();
+        }
+
         private void Application_Exit(object sender, ExitEventArgs e)
         {
             lock (ComPortLock)
@@ -179,6 +192,7 @@ namespace LightsServer
         
         public void StopCapturing()
         {
+            System.IO.Ports.SerialPort oldComPort;
             lock (ComPortLock)
             {
                 if (lightProcessorTimer != null)
@@ -191,11 +205,12 @@ namespace LightsServer
                     CaptureProcessor.Stop();
                 }
 
-                if (outputComPort != null)
-                {
-                    outputComPort.Dispose();
-                    outputComPort = null;
-                }
+                oldComPort = outputComPort;
+                outputComPort = null;
+            }
+            if(oldComPort != null)
+            {
+                oldComPort.Dispose();
             }
         }
 
@@ -324,8 +339,17 @@ namespace LightsServer
         private void NotifyIcon_DoubleClick(object sender, EventArgs e)
         {
             // Show the window
-            MainWindow window = new LightsServer.MainWindow();
-            window.Show();
+            if (mainWindow == null)
+            {
+                mainWindow = new LightsServer.MainWindow();
+                mainWindow.Closed += MainWindow_Closed;
+            }
+            mainWindow.Show();
+        }
+
+        private void MainWindow_Closed(object sender, EventArgs e)
+        {
+            mainWindow = null;
         }
 
         private void NotifyIcon_Click(object sender, EventArgs e)
