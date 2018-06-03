@@ -15,5 +15,7 @@ struct DownsamplePixelShaderConstants
 {
 	float SampleWidth;
 	float SampleHeight;
-	float padding[2];
+	float Padding[2];
+	float ColourScale[3];
+	float Padding2;
 };

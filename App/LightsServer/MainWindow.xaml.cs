@@ -34,6 +34,11 @@ namespace LightsServer
                 COMPortDropdown.SelectedItem = COMPortDropdown.Items.IndexOf(LightsServer.Properties.Settings.Default.COMPort);
             }
 
+            // Set up the tint
+            RedTint.Value = LightsServer.Properties.Settings.Default.RedTint;
+            GreenTint.Value = LightsServer.Properties.Settings.Default.GreenTint;
+            BlueTint.Value = LightsServer.Properties.Settings.Default.BlueTint;
+
             UpdateStartStopButton();
         }
 
@@ -56,6 +61,7 @@ namespace LightsServer
                 if (COMPortDropdown.SelectedItem != null)
                 {
                     currentApp.StartCapturing((string)COMPortDropdown.SelectedItem);
+                    LightsServer.Properties.Settings.Default.COMPort = (string)COMPortDropdown.SelectedItem;
 
                     PreviewImage.Source = currentApp.PreviewImage;
                 }
@@ -81,6 +87,21 @@ namespace LightsServer
         {
             App currentApp = (App)Application.Current;
             currentApp.RequestBoardDebugInfo();
+        }
+
+        private void RedTint_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            LightsServer.Properties.Settings.Default.RedTint = (float)e.NewValue;
+        }
+
+        private void GreenTint_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            LightsServer.Properties.Settings.Default.GreenTint = (float)e.NewValue;
+        }
+
+        private void BlueTint_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            LightsServer.Properties.Settings.Default.BlueTint = (float)e.NewValue;
         }
     }
 }

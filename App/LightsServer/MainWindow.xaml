@@ -10,9 +10,10 @@
     <Grid>
 
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" Name="ComPortRow"/>
+            <RowDefinition Height="*" Name="PreviewRow"/>
+            <RowDefinition Height="Auto" Name="TintRow"/>
+            <RowDefinition Height="Auto" Name="ButtonsRow"/>
         </Grid.RowDefinitions>
         
         <Grid.ColumnDefinitions>
@@ -28,13 +29,31 @@
             <Image Width="Auto" Height="Auto" Grid.Column="1" Grid.Row="1"
                    Name="PreviewImage" Margin="20" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
 
+            <Label Content="Tint" Grid.Column="0" Grid.Row="2" />
+            <StackPanel Orientation="Vertical" Grid.Column="1" Grid.Row="2" Margin="10">
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="R" MinWidth="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                    <Slider VerticalContentAlignment="Center" Width="200" Name="RedTint" ValueChanged="RedTint_ValueChanged" Minimum="0" Maximum="2"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="G" MinWidth="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                    <Slider VerticalContentAlignment="Center" Width="200" Name="GreenTint" ValueChanged="GreenTint_ValueChanged" Minimum="0" Maximum="2"/>
+                </StackPanel>
+                
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="B" MinWidth="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                    <Slider VerticalContentAlignment="Center" Width="200" Name="BlueTint" ValueChanged="BlueTint_ValueChanged" Minimum="0" Maximum="2"/>
+                </StackPanel>
+            </StackPanel>
+
             <Button Width="Auto" Height="Auto" HorizontalAlignment="Right" 
-                    Content="Debug" MinWidth="80" Margin="3" Grid.Column="0" Grid.Row="2"
+                    Content="Debug" MinWidth="80" Margin="3" Grid.Column="0" Grid.Row="3"
                     Name="DebugButton"
                     Click="DebugButton_Click" />
 
             <Button Width="Auto" Height="Auto" HorizontalAlignment="Right" 
-                    Content="Start" MinWidth="80" Margin="3" Grid.Column="1" Grid.Row="2"
+                    Content="Start" MinWidth="80" Margin="3" Grid.Column="1" Grid.Row="3"
                     Name="StartStopButton"
                     Click="StartStopButton_Click" />
 

@@ -31,7 +31,7 @@ LightProcessor::LightProcessor() :
 	m_UnexpectedErrorEvent(nullptr),
 	m_ExpectedErrorEvent(nullptr)
 {
-
+	m_ColourScale[0] = m_ColourScale[1] = m_ColourScale[2] = 1.0f;
 }
 
 LightProcessor::~LightProcessor()
@@ -198,6 +198,13 @@ HANDLE LightProcessor::GetSharedSurfaceHandle()
 	return handle;
 }
 
+void LightProcessor::SetColourScale(float r, float g, float b)
+{
+	m_ColourScale[0] = r;
+	m_ColourScale[1] = g;
+	m_ColourScale[2] = b;
+}
+
 int LightProcessor::GetOutputCount() const
 {
 	return m_OutputCount;
@@ -300,6 +307,9 @@ bool LightProcessor::ProcessFrame()
 	DownsamplePixelShaderConstants constants;
 	constants.SampleWidth = 1.0f / (float)m_LightSurfaceWidth;
 	constants.SampleHeight = 1.0f / (float)m_LightSurfaceHeight;
+	constants.ColourScale[0] = m_ColourScale[0];
+	constants.ColourScale[1] = m_ColourScale[1];
+	constants.ColourScale[2] = m_ColourScale[2];
 	D3D11_SUBRESOURCE_DATA constantBufferInitData;
 	constantBufferInitData.pSysMem = &constants;
 	constantBufferInitData.SysMemPitch = 0;

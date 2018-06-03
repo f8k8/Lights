@@ -25,6 +25,9 @@ namespace LightsServer
         // Time between keepalives
         const int KeepAliveTime = 1 * 1000;
 
+        // For thread safe access
+        object ComPortLock = new object();
+
         System.IO.Ports.SerialPort outputComPort;
         long serialPortOpenDelay;
         long keepaliveTimer;
@@ -55,132 +58,144 @@ namespace LightsServer
             notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
             notifyIcon.Icon = LightsServer.Properties.Resources.TrayIcon;
             notifyIcon.Visible = true;
-
-            // Have we got a COM port set up?
-            if(!String.IsNullOrEmpty(LightsServer.Properties.Settings.Default.COMPort))
-            {
-                StartCapturing(LightsServer.Properties.Settings.Default.COMPort);
-            }
         }
         
         private void Application_Exit(object sender, ExitEventArgs e)
         {
-            StopCapturing();
+            lock (ComPortLock)
+            {
+                StopCapturing();
+            }
         }
 
         public void StartCapturing(String comPort)
         {
-            StopCapturing();
-
-            // Try and open the output COM port
-            serialPortOpenDelay = DateTime.Now.AddMilliseconds(SerialPortOpenDelay).Ticks;
-            outputComPort = new System.IO.Ports.SerialPort(comPort, 288000, System.IO.Ports.Parity.None, 8, System.IO.Ports.StopBits.One);
-            outputComPort.NewLine = "\r\n";
-            outputComPort.ReadTimeout = 100;
-            outputComPort.WriteTimeout = 100;
-            outputComPort.DataReceived += OutputComPort_DataReceived;
-            outputComPort.Open();
-            
-            lightValues = new int[lightColumns * lightRows];
-            if (CaptureProcessor.Start(-1, lightColumns, lightRows))
+            lock (ComPortLock)
             {
-                PreviewImage = new WriteableBitmap(lightColumns, lightRows, 72, 72, System.Windows.Media.PixelFormats.Bgr32, null);
+                StopCapturing();
 
-                // Start the update timer
-                lightProcessorTimer = new DispatcherTimer();
-                lightProcessorTimer.Tick += ProcessCapture; ;
-                lightProcessorTimer.Interval = new TimeSpan(0, 0, 0, 0, 16);
-                lightProcessorTimer.Start();
+                // Try and open the output COM port
+                serialPortOpenDelay = DateTime.Now.AddMilliseconds(SerialPortOpenDelay).Ticks;
+                outputComPort = new System.IO.Ports.SerialPort(comPort, 288000, System.IO.Ports.Parity.None, 8, System.IO.Ports.StopBits.One);
+                outputComPort.NewLine = "\r\n";
+                outputComPort.ReadTimeout = 100;
+                outputComPort.WriteTimeout = 100;
+                outputComPort.DataReceived += OutputComPort_DataReceived;
+                outputComPort.Open();
+
+                lightValues = new int[lightColumns * lightRows];
+                if (CaptureProcessor.Start(-1, lightColumns, lightRows))
+                {
+                    PreviewImage = new WriteableBitmap(lightColumns, lightRows, 72, 72, System.Windows.Media.PixelFormats.Bgr32, null);
+
+                    // Start the update timer
+                    lightProcessorTimer = new DispatcherTimer();
+                    lightProcessorTimer.Tick += ProcessCapture; ;
+                    lightProcessorTimer.Interval = new TimeSpan(0, 0, 0, 0, 16);
+                    lightProcessorTimer.Start();
+                }
             }
         }
 
         private void OutputComPort_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
         {
-            // Ignore any initial input, which is probably garbage from a buffer
-            if(serialPortOpenDelay > DateTime.Now.Ticks)
+            lock (ComPortLock)
             {
-                while(outputComPort.BytesToRead > 0)
+                // Ignore any initial input, which is probably garbage from a buffer
+                if (serialPortOpenDelay > DateTime.Now.Ticks)
                 {
-                    outputComPort.ReadByte();
+                    while (outputComPort.BytesToRead > 0)
+                    {
+                        outputComPort.ReadByte();
+                    }
+                    return;
                 }
-                return;
-            }
 
-            while (outputComPort.BytesToRead > 0)
-            {
-                // Read the data
-                int readByte = outputComPort.ReadByte();
-                switch (readByte)
+                while (outputComPort.BytesToRead > 0)
                 {
-                    case 'H':
-                        {
-                            // Board has sent a Hello packet, so send one back
-                            boardIsAlive = false;
-                            lightDataPending = false;
-                            lightsUpdated = false;
-                            outputComPort.Write("H");
-                        }
-                        break;
-
-                    case 'C':
-                        {
-                            // Board has requested the config, so send it
-                            byte[] serialData = SerialDataBuilder.Config(lightColumns, lightRows);
-                            outputComPort.Write(serialData, 0, serialData.Length);
-                            boardIsAlive = true;
-                            keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
-                        }
-                        break;
-
-                    case 'R':
-                        {
-                            // Board is ready to receive light data
-                            if(boardIsAlive && lightValues != null)
+                    // Read the data
+                    int readByte = outputComPort.ReadByte();
+                    switch (readByte)
+                    {
+                        case 'H':
                             {
-                                byte[] lightData = SerialDataBuilder.LightData(lightValues);
-                                outputComPort.Write(lightData, 0, lightData.Length);
-                                keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
+                                // Board has sent a Hello packet, so send one back
+                                System.Diagnostics.Debug.WriteLine("Received Hello from controller");
+                                boardIsAlive = false;
                                 lightDataPending = false;
+                                lightsUpdated = false;
+                                outputComPort.Write("H");
                             }
-                        }
-                        break;
+                            break;
 
-                    case 'D':
-                        {
-                            try
+                        case 'C':
                             {
-                                System.Diagnostics.Debug.WriteLine(outputComPort.ReadLine());
+                                // Board has requested the config, so send it
+                                byte[] serialData = SerialDataBuilder.Config(lightColumns, lightRows);
+                                outputComPort.Write(serialData, 0, serialData.Length);
+                                boardIsAlive = true;
+                                keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
                             }
-                            catch(Exception ex)
-                            {
-                                
-                            }
-                            keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
-                        }
-                        break;
+                            break;
 
-                    default:
-                        break;
+                        case 'R':
+                            {
+                                // Board is ready to receive light data
+                                if (boardIsAlive && lightValues != null)
+                                {
+                                    System.Diagnostics.Debug.WriteLine("Board ready to receive, sending light data");
+                                    byte[] lightData = SerialDataBuilder.LightData(lightValues);
+                                    outputComPort.Write(lightData, 0, lightData.Length);
+                                    keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
+                                    lightDataPending = false;
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine("Board ready to receive, but no light data");
+                                }
+                            }
+                            break;
+
+                        case 'D':
+                            {
+                                try
+                                {
+                                    System.Diagnostics.Debug.WriteLine("From board: " + outputComPort.ReadLine());
+                                }
+                                catch (Exception ex)
+                                {
+
+                                }
+                                keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
                 }
             }
         }
         
         public void StopCapturing()
         {
-            if (lightProcessorTimer != null)
+            lock (ComPortLock)
             {
-                // Stop the update timer
-                lightProcessorTimer.Stop();
-                lightProcessorTimer = null;
+                if (lightProcessorTimer != null)
+                {
+                    // Stop the update timer
+                    lightProcessorTimer.Stop();
+                    lightProcessorTimer = null;
 
-                // Shutdown capture
-                CaptureProcessor.Stop();
-            }
+                    // Shutdown capture
+                    CaptureProcessor.Stop();
+                }
 
-            if (outputComPort != null)
-            {
-                outputComPort.Dispose();
-                outputComPort = null;
+                if (outputComPort != null)
+                {
+                    outputComPort.Dispose();
+                    outputComPort = null;
+                }
             }
         }
 
@@ -191,21 +206,31 @@ namespace LightsServer
 
         private void ProcessCapture(object sender, EventArgs e)
         {
-            if(CaptureProcessor.Process())
+            System.Diagnostics.Debug.WriteLine("lightDataPending: " + lightDataPending + " lightsUpdated: " + lightsUpdated);
+
+            // Make sure we set the colour scale
+            CaptureProcessor.SetColourScale(LightsServer.Properties.Settings.Default.RedTint, LightsServer.Properties.Settings.Default.GreenTint, LightsServer.Properties.Settings.Default.BlueTint);
+
+            if (CaptureProcessor.Process())
             {
+                System.Diagnostics.Debug.WriteLine("CaptureProcessor.Process successful");
+
                 // Get the values
-                GCHandle handle = GCHandle.Alloc(lightValues, GCHandleType.Pinned);
-                try
+                lock (ComPortLock)
                 {
-                    IntPtr pointer = handle.AddrOfPinnedObject();
-                    CaptureProcessor.GetLightValues(pointer, lightValues.Length);
-                    lightsUpdated = true;
-                }
-                finally
-                {
-                    if (handle.IsAllocated)
+                    GCHandle handle = GCHandle.Alloc(lightValues, GCHandleType.Pinned);
+                    try
                     {
-                        handle.Free();
+                        IntPtr pointer = handle.AddrOfPinnedObject();
+                        CaptureProcessor.GetLightValues(pointer, lightValues.Length);
+                        lightsUpdated = true;
+                    }
+                    finally
+                    {
+                        if (handle.IsAllocated)
+                        {
+                            handle.Free();
+                        }
                     }
                 }
 
@@ -221,7 +246,7 @@ namespace LightsServer
                         var currentPixel = backbuffer + (row * PreviewImage.BackBufferStride);
                         var direction = 1;
 
-                        // Need to reverse  direction on odd rows to compensate for the reversing
+                        // Need to reverse direction on odd rows to compensate for the reversing
                         // done in the capture library
                         if (row % 2 == 1)
                         {
@@ -239,30 +264,42 @@ namespace LightsServer
                 PreviewImage.AddDirtyRect(dirtyRect);
                 PreviewImage.Unlock();
             }
-
-            if (boardIsAlive && outputComPort != null)
+            else
             {
-                // If we've got updated light values, and an active board to send to, notify the board
-                if (!lightDataPending)
+                System.Diagnostics.Debug.WriteLine("CaptureProcessor.Process timed out");
+            }
+            System.Diagnostics.Debug.WriteLine("Done");
+
+            lock (ComPortLock)
+            {
+                if (boardIsAlive && outputComPort != null)
                 {
-                    if (lightsUpdated)
+                    // If we've got updated light values, and an active board to send to, notify the board
+                    if (!lightDataPending)
                     {
-                        // Notify the board we have updated lights data
-                        outputComPort.Write("A");
-                        keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
-                        lightDataPending = true;
-                        lightsUpdated = false;
-                    }
-                    else
-                    {
-                        // Just send our keepalive
-                        if(keepaliveTimer < DateTime.Now.Ticks)
+                        if (lightsUpdated)
                         {
+                            // Notify the board we have updated lights data
+                            outputComPort.Write("A");
                             keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
-                            System.Diagnostics.Debug.WriteLine("Sending keepalive");
-                            outputComPort.Write("K");
+                            lightDataPending = true;
+                            lightsUpdated = false;
+                        }
+                        else
+                        {
+                            // Just send our keepalive
+                            if (keepaliveTimer < DateTime.Now.Ticks)
+                            {
+                                keepaliveTimer = DateTime.Now.AddMilliseconds(KeepAliveTime).Ticks;
+                                System.Diagnostics.Debug.WriteLine("Sending keepalive");
+                                outputComPort.Write("K");
+                            }
                         }
                     }
+                }
+                if (!boardIsAlive)
+                {
+                    System.Diagnostics.Debug.WriteLine("Board is dead");
                 }
             }
 
@@ -275,9 +312,12 @@ namespace LightsServer
 
         internal void RequestBoardDebugInfo()
         {
-            if(outputComPort != null && keepaliveTimer < DateTime.Now.Ticks)
+            lock (ComPortLock)
             {
-                outputComPort.Write("D");
+                if (outputComPort != null && keepaliveTimer < DateTime.Now.Ticks && !lightDataPending)
+                {
+                    outputComPort.Write("D");
+                }
             }
         }
 

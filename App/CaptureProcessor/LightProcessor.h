@@ -12,6 +12,7 @@ public:
 	bool Initialise(int singleOutput, int lightTextureWidth, int lightTextureHeight, HANDLE unexpectedErrorEvent, HANDLE expectedErrorEvent);
 	HANDLE GetSharedSurfaceHandle();
 
+	void SetColourScale(float r, float g, float b);
 	int GetOutputCount() const;
 	const RECT& GetDesktopBounds() const;
 
@@ -42,6 +43,7 @@ private:
 	// Resources for rendering
 	int						m_LightSurfaceWidth;
 	int						m_LightSurfaceHeight;
+	float					m_ColourScale[3];
 	Microsoft::WRL::ComPtr<ID3D11Texture2D>		m_StagingLightSurface;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D>		m_LightSurface;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	m_RTV;

@@ -130,7 +130,12 @@ bool waitForSerialData(int numBytesToWaitFor)
     }
   }
 
-  return numBytesToWaitFor == serialBufferIndex;
+  bool receivedAll = numBytesToWaitFor == serialBufferIndex;
+  if(!receivedAll)
+  {
+    Serial.println("DTimed out waiting for serial data");
+  }
+  return receivedAll;
 }
 
 void cleanSerialBuffer()
@@ -185,6 +190,8 @@ void loop()
               {
                 if(SerialBuffer[0] == 'C')
                 {
+                  Serial.println("DGot config, thanks!");
+                  
                   // Read out our config
                   LEDCount = SerialBuffer[1] * SerialBuffer[2];
                   CurrentSerialMode = Waiting;
@@ -195,6 +202,10 @@ void loop()
     
                   // Reset our timeout
                   SerialTimeoutTime = millis() + SERIAL_INPUT_TIMEOUT_MILLIS;
+                }
+                else
+                {
+                  Serial.println("DMalformed config received");
                 }
               }
             }
@@ -228,6 +239,8 @@ void loop()
                 }
                 if(currentByte == endByte)
                 {
+                  Serial.println("DGot light data");
+                  
                   // We've received all our light data
                   FastLED.show();
 
@@ -236,7 +249,7 @@ void loop()
                 }
                 else
                 {
-                  Serial.println("D Timed out receiving light data");
+                  Serial.println("DTimed out receiving light data");
                 }
               }
               break;

@@ -14,6 +14,7 @@ public:
 	bool Start(int singleOutput, int lightColumns, int lightRows);
 	bool Process();
 	bool IsRunning();
+	void SetColourScale(float r, float g, float b);
 	void GetLightValues(__int32* values, int length);
 	void Stop();
 
@@ -24,6 +25,7 @@ private:
 	int m_SingleOutput;
 	int m_LightColumns;
 	int m_LightRows;
+	float m_ColourScale[3];
 
 	HANDLE m_UnexpectedErrorEvent;
 	HANDLE m_ExpectedErrorEvent;

@@ -3,5 +3,6 @@ EXPORTS
 	Start
 	Process
 	IsRunning
+	SetColourScale
 	GetLightValues
 	Stop

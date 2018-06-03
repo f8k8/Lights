@@ -5,6 +5,7 @@ cbuffer constants : register(b0)
 {
 	float SampleWidth;
 	float SampleHeight;
+	float3 ColourScale;
 };
 
 struct PS_INPUT
@@ -43,8 +44,9 @@ float4 DownSamplePS(PS_INPUT input) : SV_Target
 		}
 	}
 
-	// Scale the colour to make green stand out a bit more
+	// Scale the output value for averaging
 	outVal *= scale;
 	
-	return outVal * float4(1.0, 1.3, 0.7, 1.0);
+	// Scale the colour to include our tint
+	return outVal * float4(ColourScale.x, ColourScale.y, ColourScale.z, 1.0);
 }

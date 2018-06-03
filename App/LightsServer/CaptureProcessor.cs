@@ -18,6 +18,9 @@ namespace LightsServer
         public static extern bool IsRunning();
 
         [DllImport("CaptureProcessor.dll")]
+        public static extern void SetColourScale(float red, float green, float blue);
+
+        [DllImport("CaptureProcessor.dll")]
         public static extern void GetLightValues(IntPtr values, int length);
 
         [DllImport("CaptureProcessor.dll")]
